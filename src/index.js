@@ -24,22 +24,65 @@ function checksExistsUserAccount(request, response, next) {
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  const {user} = request;
+  const { user } = request;
+  
+  if(!user.pro && user.todos.length >= 10){
+    return response.status(403).json({error: 'user with more than 10 todos'});
+  }
 
-  if(user.pro === false && user.todos.length > 10){
-    return response.status(403).json({error: 'user with more than 10 todos'})
-  } else if(user.todos.length <=10 || user.pro){
+  if(user.pro || user.todos.length <= 10){
     return next();
   }
 
 }
 
+/* 
+if(!user.pro && user.todos.length > 10){
+  return response.status(403).json({error: 'user with more than 10 todos'});
+}
+**/
+
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+
+  const userExist = users.findIndex((user) => user.username === username);
+
+  if(userExist === -1){
+    return response.status(404).json({ error: "user not found" });
+  }
+
+  const idValidate = validate(id);
+
+  if(!idValidate){
+    return response.status(400).json({ error: "Id invalid"})
+  }
+
+  const idTodoExist = users[userExist].todos.findIndex((todo) => todo.id === id);
+
+  if(idTodoExist === -1){
+    return response.status(404).json({ error: "id of todo not exist"})
+  }
+
+  request.user = users[userExist];
+
+  request.todo = users[userExist].todos[idTodoExist];
+
+  return next();
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const serchUserById = users.findIndex((user) => user.id === id);
+
+  if(serchUserById === -1) {
+    return response.status(404).json({ error: "userId not found"});
+  }
+
+  request.user = users[serchUserById];
+
+  return next();
 }
 
 app.post('/users', (request, response) => {
@@ -63,6 +106,7 @@ app.post('/users', (request, response) => {
 
   return response.status(201).json(user);
 });
+
 
 app.get('/users/:id', findUserById, (request, response) => {
   const { user } = request;
